@@ -25,10 +25,10 @@ def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2,
                             n_timestep, dtype=np.float64)
     elif schedule == 'warmup10':
         betas = _warmup_beta(linear_start, linear_end,
-                             n_timestep, 0.1)
+                             n_timestep, warmup_frac=0.1)
     elif schedule == 'warmup50':
         betas = _warmup_beta(linear_start, linear_end,
-                             n_timestep, 0.5)
+                             n_timestep, warmup_frac=0.5)
     elif schedule == 'const':
         betas = linear_end * np.ones(n_timestep, dtype=np.float64)
     elif schedule == 'jsd':  # 1/T, 1/(T-1), 1/(T-2), ..., 1
@@ -269,15 +269,6 @@ class GaussianDiffusion(nn.Module):
             extract(self.sqrt_one_minus_alphas_cumprod,
                     t, x_start.shape) * noise
         )
-        # random gama
-        # x_shape = x_start.shape
-        # l = self.alphas_cumprod .gather(-1, t)
-        # r = self.alphas_cumprod .gather(-1, t+1)
-        # gama = (r - l) * torch.rand(0, 1) + l
-        # gama = gama.reshape(t.shape[0], *((1,) * (len(x_shape) - 1)))
-        # return (
-        #     nq.sqrt(gama) * x_start + nq.sqrt(1-gama)* noise
-        # )
 
     def p_losses(self, x_in, noise=None):
         x_start = x_in['HR']

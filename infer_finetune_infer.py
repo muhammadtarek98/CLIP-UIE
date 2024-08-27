@@ -14,10 +14,10 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--config', type=str, default='config/sr_sr3_32_256_UIEB_SUIM_E_plus_finetune_clip_classifier.json',
                         help='JSON file for configuration')
     parser.add_argument('-p', '--phase', type=str, choices=['val'], help='val(generation)', default='val')
-    parser.add_argument('-gpu', '--gpu_ids', type=str, default=None)
+    parser.add_argument('-gpu', '--gpu_ids', type=str, default="0")
     parser.add_argument('-debug', '-d', action='store_true')
-    parser.add_argument('-enable_wandb', action='store_true')
-    parser.add_argument('-log_infer', action='store_true')
+    parser.add_argument('-enable_wandb', action='store_true',default="False")
+    parser.add_argument('-log_infer', action='store_true',default="False")
     
     # parse configs
     args = parser.parse_args()
@@ -29,8 +29,8 @@ if __name__ == "__main__":
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
 
-    Logger.setup_logger(None, opt['path']['log'],
-                        'train', level=logging.INFO, screen=True)
+    Logger.setup_logger(logger_name="custom_dataset",root= opt['path']['log'],
+                        phase='train', level=logging.INFO, screen=True)
     Logger.setup_logger('val', opt['path']['log'], 'val', level=logging.INFO)
     logger = logging.getLogger('base')
     logger.info(Logger.dict2str(opt))

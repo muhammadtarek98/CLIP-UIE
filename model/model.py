@@ -1,6 +1,5 @@
 import logging
 from collections import OrderedDict
-
 import torch
 import torch.nn as nn
 import os
@@ -140,9 +139,7 @@ class DDPM(BaseModel):
                      'scheduler': None, 'optimizer': None}
         opt_state['optimizer'] = self.optG.state_dict()
         torch.save(opt_state, opt_path)
-
-        logger.info(
-            'Saved model in [{:s}] ...'.format(gen_path))
+        logger.info('Saved model in [{:s}] ...'.format(gen_path))
 
     def load_network(self):
         load_path = self.opt['path']['resume_state']
