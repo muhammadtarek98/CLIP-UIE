@@ -8,14 +8,12 @@ import numpy as np
 from tqdm import tqdm
 import clip_score
 
-def _warmup_beta(linear_start, linear_end, n_timestep, warmup_frac):
+def _warmup_beta(linear_start, linear_end, n_timestep, warmup_frac)->np.ndarray:
     betas = linear_end * np.ones(n_timestep, dtype=np.float64)
     warmup_time = int(n_timestep * warmup_frac)
     betas[:warmup_time] = np.linspace(
         linear_start, linear_end, warmup_time, dtype=np.float64)
     return betas
-
-
 def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2, cosine_s=8e-3):
     if schedule == 'quad':
         betas = np.linspace(linear_start ** 0.5, linear_end ** 0.5,
@@ -67,7 +65,7 @@ def extract(a, t, x_shape):
     return out.reshape(b, *((1,) * (len(x_shape) - 1)))
 
 
-def noise_like(shape, device, repeat=False):
+def noise_like(shape, device:torch.device, repeat:bool=False):
     def repeat_noise(): return torch.randn(
         (1, *shape[1:]), device=device).repeat(shape[0], *((1,) * (len(shape) - 1)))
 
@@ -79,14 +77,14 @@ class GaussianDiffusion(nn.Module):
     def __init__(
         self,
         denoise_fn,
-        image_size,
-        channels=3,
+        image_size:int,
+        channels:int=3,
         loss_type='l1',
-        conditional=True,
+        conditional:bool=True,
         schedule_opt=None
 
     ):
-        super().__init__()
+        super(GaussianDiffusion,self).__init__()
         self.channels = channels
         self.image_size = image_size
         self.denoise_fn = denoise_fn
@@ -99,7 +97,7 @@ class GaussianDiffusion(nn.Module):
             pass
             # self.set_new_noise_schedule(schedule_opt)
 
-    def set_loss(self, device):
+    def set_loss(self, device:torch.device):
         if self.loss_type == 'l1':
             self.loss_func = nn.L1Loss(reduction='sum').to(device)
         elif self.loss_type == 'l2':
@@ -107,7 +105,7 @@ class GaussianDiffusion(nn.Module):
         else:
             raise NotImplementedError()
 
-    def set_new_noise_schedule(self, schedule_opt, device):
+    def set_new_noise_schedule(self, schedule_opt, device:torch.device):
         to_torch = partial(torch.tensor, dtype=torch.float32, device=device)
         betas = make_beta_schedule(
             schedule=schedule_opt['schedule'],
@@ -121,35 +119,35 @@ class GaussianDiffusion(nn.Module):
 
         timesteps, = betas.shape
         self.num_timesteps = int(timesteps)
-        self.register_buffer('betas', to_torch(betas))
-        self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
-        self.register_buffer('alphas_cumprod_prev',
-                             to_torch(alphas_cumprod_prev))
+        self.register_buffer(name='betas',tensor= to_torch(betas))
+        self.register_buffer(name='alphas_cumprod',tensor= to_torch(alphas_cumprod))
+        self.register_buffer(name='alphas_cumprod_prev',
+                             tensor=to_torch(alphas_cumprod_prev))
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
-        self.register_buffer('sqrt_alphas_cumprod',
-                             to_torch(np.sqrt(alphas_cumprod)))
-        self.register_buffer('sqrt_one_minus_alphas_cumprod',
-                             to_torch(np.sqrt(1. - alphas_cumprod)))
-        self.register_buffer('log_one_minus_alphas_cumprod',
-                             to_torch(np.log(1. - alphas_cumprod)))
-        self.register_buffer('sqrt_recip_alphas_cumprod',
-                             to_torch(np.sqrt(1. / alphas_cumprod)))
-        self.register_buffer('sqrt_recipm1_alphas_cumprod',
-                             to_torch(np.sqrt(1. / alphas_cumprod - 1)))
+        self.register_buffer(name='sqrt_alphas_cumprod',
+                             tensor=to_torch(np.sqrt(alphas_cumprod)))
+        self.register_buffer(name='sqrt_one_minus_alphas_cumprod',
+                             tensor=to_torch(np.sqrt(1. - alphas_cumprod)))
+        self.register_buffer(name='log_one_minus_alphas_cumprod',
+                             tensor=to_torch(np.log(1. - alphas_cumprod)))
+        self.register_buffer(name='sqrt_recip_alphas_cumprod',
+                             tensor=to_torch(np.sqrt(1. / alphas_cumprod)))
+        self.register_buffer(name='sqrt_recipm1_alphas_cumprod',
+                             tensor=to_torch(np.sqrt(1. / alphas_cumprod - 1)))
 
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         posterior_variance = betas * \
             (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
         # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
-        self.register_buffer('posterior_variance',
-                             to_torch(posterior_variance))
+        self.register_buffer(name='posterior_variance',
+                             tensor=to_torch(posterior_variance))
         # below: log calculation clipped because the posterior variance is 0 at the beginning of the diffusion chain
-        self.register_buffer('posterior_log_variance_clipped', to_torch(
+        self.register_buffer(name='posterior_log_variance_clipped',tensor= to_torch(
             np.log(np.maximum(posterior_variance, 1e-20))))
-        self.register_buffer('posterior_mean_coef1', to_torch(
+        self.register_buffer(name='posterior_mean_coef1',tensor= to_torch(
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
-        self.register_buffer('posterior_mean_coef2', to_torch(
+        self.register_buffer(name='posterior_mean_coef2',tensor= to_torch(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
 
     def q_mean_variance(self, x_start, t):
@@ -250,13 +248,13 @@ class GaussianDiffusion(nn.Module):
 
         assert x1.shape == x2.shape
 
-        t_batched = torch.stack([torch.tensor(t, device=device)] * b)
-        xt1, xt2 = map(lambda x: self.q_sample(x, t=t_batched), (x1, x2))
+        t_batched = torch.stack(tensors=[torch.tensor(t, device=device)] * b)
+        xt1, xt2 = map(lambda x: self.q_sample(x_start=x,t=t_batched), (x1, x2))
 
         img = (1 - lam) * xt1 + lam * xt2
         for i in tqdm(reversed(range(0, t)), desc='interpolation sample time step', total=t):
             img = self.p_sample(img, torch.full(
-                (b,), i, device=device, dtype=torch.long))
+                size=(b,), fill_value=i, device=device, dtype=torch.long))
 
         return img
 
@@ -273,20 +271,15 @@ class GaussianDiffusion(nn.Module):
     def p_losses(self, x_in, noise=None):
         x_start = x_in['HR']
         [b, c, h, w] = x_start.shape
-        t = torch.randint(0, self.num_timesteps, (b,),
+        t = torch.randint(low=0, high=self.num_timesteps,size= (b,),
                           device=x_start.device).long()
-
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-
         if not self.conditional:
             x_recon = self.denoise_fn(x_noisy, t)
         else:
             x_recon = self.denoise_fn(
-                torch.cat([x_in['SR'], x_noisy], dim=1), t)
-
-        # at = extract((1.0 - self.betas).cumprod(dim=0), t, x_start.shape)
-        # x0_t = (x_noisy - x_recon * (1 - at).sqrt()) / at.sqrt()
+                torch.cat(tensors=[x_in['SR'], x_noisy], dim=1), t)
         loss = self.loss_func(noise, x_recon)
 
         return loss

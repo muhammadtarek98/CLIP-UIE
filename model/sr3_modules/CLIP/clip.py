@@ -10,8 +10,8 @@ from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
 from tqdm import tqdm
 
-from .model import build_model
-from .simple_tokenizer import SimpleTokenizer as _Tokenizer
+from model import build_model
+from simple_tokenizer import SimpleTokenizer as _Tokenizer
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -19,10 +19,8 @@ try:
 except ImportError:
     BICUBIC = Image.BICUBIC
 
-
 if packaging.version.parse(torch.__version__) < packaging.version.parse("1.7.1"):
     warnings.warn("PyTorch version 1.7.1 or higher is recommended")
-
 
 __all__ = ["available_models", "load", "tokenize"]
 _tokenizer = _Tokenizer()
@@ -78,11 +76,11 @@ def _convert_image_to_rgb(image):
 
 def _transform(n_px):
     return Compose([
-        Resize(n_px, interpolation=BICUBIC),
-        CenterCrop(n_px),
+        Resize(size=n_px, interpolation=BICUBIC),
+        CenterCrop(size=n_px),
         _convert_image_to_rgb,
         ToTensor(),
-        Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        Normalize(mean=(0.48145466, 0.4578275, 0.40821073),std=(0.26862954, 0.26130258, 0.27577711)),
     ])
 
 
@@ -192,8 +190,6 @@ def load(name: str, device: Union[str, torch.device] = "cuda" if torch.cuda.is_a
         model.float()
 
     return model, _transform(model.input_resolution.item())
-
-
 def tokenize(texts: Union[str, List[str]], context_length: int = 77, truncate: bool = False) -> Union[torch.IntTensor, torch.LongTensor]:
     """
     Returns the tokenized representation of given input string(s)

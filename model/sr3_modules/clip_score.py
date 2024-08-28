@@ -1,12 +1,13 @@
 from turtle import forward
 import torchvision.transforms as transforms
 import torch
-import clip
+#import clip
 import torch.nn as nn
 from torch.nn import functional as F
 #from CLIP.clip import load
+from CLIP import clip
 import sys
-sys.path.append('/data/liusx/Pycharm/underwater_clip_learning/model/sr3_modules/CLIP')
+#sys.path.append('/data/liusx/Pycharm/underwater_clip_learning/model/sr3_modules/CLIP')
 from CLIP.clip import load
 from collections import OrderedDict
 
@@ -17,23 +18,19 @@ model.to(device)
 for para in model.parameters():
 	para.requires_grad = False
 
-def get_clip_score(tensor,words):
-	score=0
+def get_clip_score(tensor:torch.Tensor,words:list):
+	score=0.0
 	for i in range(tensor.shape[0]):
 		#image preprocess
-		clip_normalizer = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-		img_resize = transforms.Resize((224,224))
+		clip_normalizer = transforms.Normalize(mean=(0.48145466, 0.4578275, 0.40821073), std=(0.26862954, 0.26130258, 0.27577711))
+		img_resize = transforms.Resize(size=(224,224))
 		image2=img_resize(tensor[i])
 		image=clip_normalizer(image2).unsqueeze(0)
-		#get probabilitis
 		text = clip.tokenize(words).to(device)
 		logits_per_image, logits_per_text = model(image, text)
 		probs = logits_per_image.softmax(dim=-1)
-		#2-word-compared probability
-		# prob = probs[0][0]/probs[0][1]#you may need to change this line for more words comparison
 		prob = probs[0][0]
 		score =score + prob
-
 	return score
 
 
@@ -42,11 +39,10 @@ class L_clip(nn.Module):
 		super(L_clip,self).__init__()
 		for param in self.parameters(): 
 			param.requires_grad = False
-  
-	def forward(self, x, light):
-		k1 = get_clip_score(x,["dark","normal light"])
+	def forward(self, x:torch.Tensor, light)->torch.Tensor:
+		k1 = get_clip_score(x,words=["dark","normal light","blur","noise"])
 		if light:
-			k2 = get_clip_score(x,["noisy photo","clear photo"])
+			k2 = get_clip_score(x,words=["noisy photo","clear photo"])
 			return (k1+k2)/2
 		return k1
 
@@ -58,9 +54,8 @@ class Prompts(nn.Module):
 			with torch.no_grad():
 				self.text_features = model.encode_text(text).cuda()
 		else:
-			self.text_features=torch.nn.init.xavier_normal_(nn.Parameter(torch.cuda.FloatTensor(2,512))).cuda()
-
-	def forward(self,tensor):
+			self.text_features=torch.nn.init.xavier_normal_(nn.Parameter(data=torch.cuda.FloatTensor(2,512))).cuda()
+	def forward(self,tensor:torch.Tensor)->torch.Tensor:
 		for i in range(tensor.shape[0]):
 			image_features=tensor[i]
 			nor=torch.norm(self.text_features,dim=-1, keepdim=True)
@@ -68,7 +63,7 @@ class Prompts(nn.Module):
 			if(i==0):
 				probs=similarity
 			else:
-				probs=torch.cat([probs,similarity],dim=0)
+				probs=torch.cat(tensors=[probs,similarity],dim=0)
 		return probs
 
 learn_prompt=Prompts().cuda()
@@ -80,7 +75,6 @@ def get_clip_score_from_feature(tensor,text_features):
 	for i in range(tensor.shape[0]):
 		image2=img_resize(tensor[i])
 		image=clip_normalizer(image2.reshape(1,3,224,224))
-  
 		image_features = model.encode_image(image)
 		image_nor=image_features.norm(dim=-1, keepdim=True)
 		nor= text_features.norm(dim=-1, keepdim=True)
@@ -88,7 +82,6 @@ def get_clip_score_from_feature(tensor,text_features):
 		probs = similarity
 		prob = probs[0][0]
 		score =score + prob
-	# score=score
 	score=score/tensor.shape[0]
 	return score
 
@@ -98,13 +91,13 @@ class L_clip_from_feature(nn.Module):
 		super(L_clip_from_feature,self).__init__()
 		for param in self.parameters(): 
 			param.requires_grad = False
-  
+
 	def forward(self, x, text_features):
 		k1 = get_clip_score_from_feature(x,text_features)
 		return k1
 
 #for clip reconstruction loss
-res_model, res_preprocess = load("RN101", device=device, download_root="./clip_model/")
+res_model, res_preprocess = load(name="RN101", device=device, download_root="./clip_model/")
 for para in res_model.parameters():
 	para.requires_grad = False
 

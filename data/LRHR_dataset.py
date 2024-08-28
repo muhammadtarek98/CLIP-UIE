@@ -7,18 +7,16 @@ import data.util as Util
 
 
 class LRHRDataset(Dataset):
-    def __init__(self, dataroot, datatype, l_resolution=16, r_resolution=128, split='train', data_len=-1, need_LR=False):
+    def __init__(self, dataroot:str, datatype, l_resolution:int=16, r_resolution:int=128, split:str='train', data_len:int=-1, need_LR:bool=False):
         self.datatype = datatype
         self.l_res = l_resolution
         self.r_res = r_resolution
         self.data_len = data_len
         self.need_LR = need_LR
         self.split = split
-
         if datatype == 'lmdb':
             self.env = lmdb.open(dataroot, readonly=True, lock=False,
                                  readahead=False, meminit=False)
-            # init the datalen
             with self.env.begin(write=False) as txn:
                 self.dataset_len = int(txn.get("length".encode("utf-8")))
             if self.data_len <= 0:
@@ -42,13 +40,12 @@ class LRHRDataset(Dataset):
             raise NotImplementedError(
                 'data_type [{:s}] is not recognized.'.format(datatype))
 
-    def __len__(self):
+    def __len__(self)->int:
         return self.data_len
 
-    def __getitem__(self, index):
+    def __getitem__(self, index:int):
         img_HR = None
         img_LR = None
-
         if self.datatype == 'lmdb':
             with self.env.begin(write=False) as txn:
                 hr_img_bytes = txn.get(

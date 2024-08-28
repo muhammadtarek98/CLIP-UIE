@@ -8,12 +8,11 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--path', type=str,
                         default='experiments/basic_sr_ffhq_210809_142238/results')
     args = parser.parse_args()
-    real_names = list(glob.glob('{}/*_hr.png'.format(args.path)))
-    fake_names = list(glob.glob('{}/*_sr.png'.format(args.path)))
+    real_names = list(glob.glob(pathname='{}/*_hr.png'.format(args.path)))
+    fake_names = list(glob.glob(pathname='{}/*_sr.png'.format(args.path)))
 
     real_names.sort()
     fake_names.sort()
-
     avg_psnr = 0.0
     avg_ssim = 0.0
     idx = 0
@@ -21,13 +20,12 @@ if __name__ == "__main__":
         idx += 1
         ridx = rname.rsplit("_hr")[0]
         fidx = rname.rsplit("_sr")[0]
-        assert ridx == fidx, 'Image ridx:{ridx}!=fidx:{fidx}'.format(
-            ridx, fidx)
+        assert ridx == fidx, 'Image ridx:{ridx}!=fidx:{fidx}'.format(ridx, fidx)
 
-        hr_img = np.array(Image.open(rname))
-        sr_img = np.array(Image.open(fname))
-        psnr = Metrics.calculate_psnr(sr_img, hr_img)
-        ssim = Metrics.calculate_ssim(sr_img, hr_img)
+        hr_img = np.array(object=Image.open(rname))
+        sr_img = np.array(object=Image.open(fname))
+        psnr = Metrics.calculate_psnr(img1=sr_img,img2= hr_img)
+        ssim = Metrics.calculate_ssim(img1=sr_img, img2=hr_img)
         avg_psnr += psnr
         avg_ssim += ssim
         if idx % 20 == 0:

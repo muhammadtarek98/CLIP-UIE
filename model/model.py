@@ -14,7 +14,6 @@ class DDPM(BaseModel):
         # define network and load pretrained models
         self.netG = self.set_device(networks.define_G(opt))
         self.schedule_phase = None
-
         # set loss and load resume state
         self.set_loss()
         self.set_new_noise_schedule(
@@ -40,7 +39,6 @@ class DDPM(BaseModel):
             self.log_dict = OrderedDict()
         self.load_network()
         self.print_network()
-
     def feed_data(self, data):
         self.data = self.set_device(data)
 
@@ -53,7 +51,6 @@ class DDPM(BaseModel):
         l_pix = l_pix.sum()
         l_pix.backward()
         self.optG.step()
-
         # set log
         self.log_dict['l_pix'] = l_pix.item()
 

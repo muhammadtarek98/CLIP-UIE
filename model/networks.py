@@ -10,7 +10,7 @@ logger = logging.getLogger('base')
 ####################
 
 
-def weights_init_normal(m, std=0.02):
+def weights_init_normal(m, std:float=0.02):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
         init.normal_(m.weight.data, 0.0, std)
@@ -25,7 +25,7 @@ def weights_init_normal(m, std=0.02):
         init.constant_(m.bias.data, 0.0)
 
 
-def weights_init_kaiming(m, scale=1):
+def weights_init_kaiming(m, scale:int=1):
     classname = m.__class__.__name__
     if classname.find('Conv2d') != -1:
         init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
@@ -57,7 +57,7 @@ def weights_init_orthogonal(m):
         init.constant_(m.bias.data, 0.0)
 
 
-def init_weights(net, init_type='kaiming', scale=1, std=0.02):
+def init_weights(net, init_type='kaiming', scale:int=1, std:float=0.02):
     # scale for 'kaiming', std for 'normal'.
     logger.info('Initialization method [{:s}]'.format(init_type))
     if init_type == 'normal':

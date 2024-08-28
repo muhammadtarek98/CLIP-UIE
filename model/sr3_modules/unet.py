@@ -214,7 +214,7 @@ class UNet(nn.Module):
                 x = layer(x)
         for layer in self.ups:
             if isinstance(layer, ResnetBlocWithAttn):
-                x = layer(torch.cat((x, feats.pop()), dim=1), t)
+                x = layer(torch.cat(tensors=(x, feats.pop()), dim=1), t)
             else:
                 x = layer(x)
         return self.final_conv(x)
